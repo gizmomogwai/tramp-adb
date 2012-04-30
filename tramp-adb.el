@@ -458,13 +458,13 @@ Convert (\"-al\") to (\"-a\" \"-l\").  Remove arguments like \"--dired\"."
 
 (defun tramp-adb-handle-file-writable-p (filename)
   (with-parsed-tramp-file-name filename nil
-    ;; Missing "test" command on Android devices.
-    (tramp-message
-     v 5 "not implemented yet (Assuming /data/data is writable) :%s" localname)
-    (let ((rw-path "/data/data"))
-      (and (>= (length localname) (length rw-path))
-	   (string= (substring localname 0 (length rw-path))
-		    rw-path)))))
+    (tramp-adb-send-command v (format "test -w %s ; echo tramp_exit_status $?" localname))
+    (with-current-buffer (tramp-get-connection-buffer v)
+      (goto-char (point-max))
+      (unless (re-search-backward "tramp_exit_status [0-9]+" nil t)
+	(tramp-error vec 'file-error "Couldn't find exit status of `%s'" command))
+      (skip-chars-forward "^ ")
+      (zerop (read (current-buffer))))))
 
 (defun tramp-adb-handle-write-region
   (start end filename &optional append visit lockname confirm)
